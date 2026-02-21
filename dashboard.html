@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OBSCURA // DASHBOARD</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="dashboard-page">
+    <canvas id="bgCanvas"></canvas>
+
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="hex-sm">⬡</div>
+            <span class="sidebar-title">OBSCURA</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" onclick="showTab('users',this)">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">USERS</span>
+                <span class="nav-badge" id="badge-users"></span>
+            </a>
+            <a href="#" class="nav-item" onclick="showTab('log',this)">
+                <span class="nav-icon">📡</span>
+                <span class="nav-label">ACTIVITY</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showTab('ban',this)">
+                <span class="nav-icon">🔴</span>
+                <span class="nav-label">IP BAN</span>
+                <span class="nav-badge" id="badge-bans"></span>
+            </a>
+
+        </nav>
+        <button class="logout-btn" onclick="logout()">⎋ &nbsp;WYLOGUJ</button>
+    </aside>
+
+    <main class="main-content">
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="topbar-breadcrumb">
+                <span class="breadcrumb-app">OBSCURA</span>
+                <span class="breadcrumb-sep">//</span>
+                <span class="breadcrumb-page" id="pageTitle">USERS</span>
+            </div>
+            <div class="topbar-right">
+                <div class="live-clock" id="clock">--:--:<span id="clockSec">--</span></div>
+                <div class="status-chip">
+                    <div class="status-dot"></div>
+                    <span class="status-text">SUPABASE LIVE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- USERS TAB -->
+        <div id="tab-users" class="tab-content active">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">ZARZĄDZANIE UŻYTKOWNIKAMI</h2>
+                    <p class="section-sub">Twórz i zarządzaj kontami dostępu do BotPanel</p>
+                </div>
+                <button class="btn-primary" onclick="openCreateModal()" style="width:auto;padding:13px 28px;">+ NOWY
+                    UŻYTKOWNIK</button>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-card">
+                    <span class="stat-icon">🌐</span>
+                    <div class="stat-label">ŁĄCZNIE KONT</div>
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-bar">
+                        <div class="stat-bar-fill" id="barTotal" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">✅</span>
+                    <div class="stat-label">AKTYWOWANE (IP)</div>
+                    <div class="stat-value" id="statActive">0</div>
+                    <div class="stat-bar">
+                        <div class="stat-bar-fill" id="barActive" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">⏳</span>
+                    <div class="stat-label">OCZEKUJĄCE</div>
+                    <div class="stat-value" id="statPending">0</div>
+                    <div class="stat-bar">
+                        <div class="stat-bar-fill" id="barPending" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <div class="table-header-bar">
+                    <span class="table-header-title">REJESTR UŻYTKOWNIKÓW</span>
+                    <span class="table-count" id="tableCount">0 rekordów</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>LOGIN</th>
+                                <th>STATUS</th>
+                                <th>BOUND IP</th>
+                                <th>UTWORZONO</th>
+                                <th>AKCJE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="6" class="loading-row">ŁADOWANIE DANYCH...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIVITY TAB -->
+        <div id="tab-log" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">LOG AKTYWNOŚCI</h2>
+                    <p class="section-sub">Historia logowań i aktywacji IP</p>
+                </div>
+            </div>
+            <div class="table-card">
+                <div class="table-header-bar">
+                    <span class="table-header-title">ZDARZENIA SYSTEMOWE</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>LOGIN</th>
+                                <th>IP</th>
+                                <th>STATUS</th>
+                                <th>DATA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody">
+                            <tr>
+                                <td colspan="4" class="loading-row">Brak historii.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- BAN TAB -->
+        <div id="tab-ban" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">ZARZĄDZANIE BANAMI IP</h2>
+                    <p class="section-sub">Permanentnie zablokuj adresy IP — login z tego IP jest niemożliwy</p>
+                </div>
+            </div>
+
+            <!-- Quick add form -->
+            <div class="table-card" style="padding:28px;">
+                <div class="table-header-bar"
+                    style="padding:0 0 18px;border-bottom:1px solid var(--border);margin-bottom:22px;">
+                    <span class="table-header-title">🔴 DODAJ BAN</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:14px;align-items:end;">
+                    <div class="form-group" style="margin:0;">
+                        <label class="field-label">ADRES IP</label>
+                        <input type="text" id="banIp" class="field-input" placeholder="np. 192.168.1.100"
+                            autocomplete="off" />
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="field-label">POWÓD (opcjonalnie)</label>
+                        <input type="text" id="banReason" class="field-input"
+                            placeholder="np. Nieautoryzowany dostęp" />
+                    </div>
+                    <button onclick="addBan()"
+                        style="background:linear-gradient(135deg,#5c1a1a,#cc2233,#5c1a1a);background-size:200% auto;border:1px solid rgba(255,68,85,0.5);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:3px;padding:13px 22px;cursor:pointer;transition:all 0.3s;white-space:nowrap;">
+                        🔴 ZBANUJ IP
+                    </button>
+                </div>
+                <div id="banError" class="error-msg" style="display:none;margin-top:14px;margin-bottom:0;"></div>
+            </div>
+
+            <!-- Banned IPs table -->
+            <div class="table-card">
+                <div class="table-header-bar">
+                    <span class="table-header-title">LISTA ZBANOWANYCH IP</span>
+                    <span class="table-count" id="banCount">0 banów</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>ADRES IP</th>
+                                <th>POWÓD</th>
+                                <th>ZBANOWANO</th>
+                                <th>AKCJA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bansTableBody">
+                            <tr>
+                                <td colspan="5" class="loading-row">ŁADOWANIE...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+
+    <!-- CREATE MODAL -->
+    <div id="createModal" class="modal-overlay" style="display:none" onclick="closeModalOnBg(event)">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">NOWY UŻYTKOWNIK</h3>
+                <button class="modal-close" onclick="closeCreateModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <label class="field-label">LOGIN</label>
+                <input type="text" id="newLogin" class="field-input" placeholder="np. operator_01" autocomplete="off" />
+            </div>
+            <div class="form-group">
+                <label class="field-label">HASŁO</label>
+                <input type="password" id="newPass" class="field-input" placeholder="min. 4 znaki" />
+            </div>
+            <div id="createError" class="error-msg" style="display:none"></div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeCreateModal()">ANULUJ</button>
+                <button class="btn-primary" onclick="createUser()" style="width:auto;padding:12px 28px;">UTWÓRZ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Subtle canvas bg ──────────────────────────────────────
+        const cv = document.getElementById('bgCanvas');
+        const cx = cv.getContext('2d');
+        let W = cv.width = innerWidth, H = cv.height = innerHeight;
+        window.addEventListener('resize', () => { W = cv.width = innerWidth; H = cv.height = innerHeight; });
+        const pts = Array.from({ length: 60 }, () => ({
+            x: Math.random() * W, y: Math.random() * H,
+            vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .3
+        }));
+        (function anim() {
+            cx.clearRect(0, 0, W, H);
+            cx.strokeStyle = 'rgba(68,136,255,0.03)'; cx.lineWidth = 1;
+            for (let x = 0; x < W; x += 100) { cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, H); cx.stroke(); }
+            for (let y = 0; y < H; y += 100) { cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke(); }
+            pts.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0 || p.x > W) p.vx *= -1;
+                if (p.y < 0 || p.y > H) p.vy *= -1;
+                cx.save(); cx.globalAlpha = .15; cx.fillStyle = '#4488ff';
+                cx.beginPath(); cx.arc(p.x, p.y, 1, 0, Math.PI * 2); cx.fill(); cx.restore();
+            });
+            requestAnimationFrame(anim);
+        })();
+
+        // ── Live clock ────────────────────────────────────────────
+        function updateClock() {
+            const n = new Date();
+            const hm = n.toTimeString().slice(0, 5);
+            const s = String(n.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').innerHTML = hm + ':<span id="clockSec">' + s + '</span>';
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        // ── Tab switching ─────────────────────────────────────────
+        function showTab(name, el) {
+            event.preventDefault();
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            document.getElementById('pageTitle').textContent = name.toUpperCase();
+            el.classList.add('active');
+            if (name === 'users') loadUsers();
+        }
+
+        // ── Animated counter ──────────────────────────────────────
+        function animCount(el, target) {
+            let start = 0;
+            const step = () => {
+                start += Math.ceil((target - start) / 6) || 1;
+                el.textContent = start >= target ? target : start;
+                if (start < target) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        }
+    </script>
+    <script src="app.js"></script>
+</body>
+
+</html>
